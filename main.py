@@ -15,6 +15,11 @@
 # limitations under the License.
 #
 import webapp2
+import re
+
+USER_REGEX = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+PASSWORD_REGEX = re.compile(r"^.{3,20}$")
+EMAIL_REGEX = re.compile(r"^[\S]+@[\S]+.[\S]+$")
 
 # html boilerplate for the top of every page
 page_header = """
@@ -32,24 +37,48 @@ page_header = """
 """
 
 main_content = """
-    <form method="post" action="/welcome">
-        <h1>Signup</h1>
-        <label> Username
-            <input type="text" name="username">
-        </label>
-        <br>
-        <label> Password
-            <input type="password" name="password">
-        </label>
-        <br>
-        <label> Verify Password
-            <input type="password" name="verify">
-        </label>
-        <br>
-        <label> Email (optional)
-            <input type="email" name="email">
-        </label>
-        <br>
+    <h1>Signup</h1>
+    <form method="post">
+        <table>
+            <tbody>
+                <tr>
+                    <td>
+                        <label>Username</label>
+                    </td>
+                    <td>
+                        <input type="text" name="username" value required>
+                        <span class="error"</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label> Password</label>
+                    </td>
+                    <td>
+                        <input type="password" name="password" value required>
+                        <span class="error"</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label> Verify Password</label>
+                    </td>
+                    <td>
+                        <input type="password" name="verify" value required>
+                        <span class="error"</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label> Email (optional)</label>
+                    </td>
+                    <td>
+                        <input type="email" name="email">
+                        <span class="error"</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
         <input type="submit">
     </form>
 """
@@ -62,16 +91,19 @@ page_footer = """
 
 def valid_username(username):
     if username:
-        return month_abbvs.get(username)
+        if USER_REGEX.match(username):
+            return username
 
 def valid_password(password, verify):
     if password and verify:
         if password == verify:
-            return password
+            if PASSWORD_REGEX.match(password):
+                return password
 
 def valid_email(email):
     if email:
-        return email
+        if EMAIL_REGEX.match(email):
+            return email
 
 
 class MainHandler(webapp2.RequestHandler):
@@ -87,17 +119,24 @@ class MainHandler(webapp2.RequestHandler):
 
         username = valid_username(input_username)
         password = valid_password(input_password, input_verify_password)
-        email = valid_password(input_password)
+        email = valid_email(input_email)
 
         if not (username and password and email):
-            self.write.form("Incorrect input")
+            content = page_header + main_content + "Incorrect input" + page_footer
+            self.response.write(content)
+            #self.write.form("Incorrect input")
         else:
-            self.redirect("/welcome")
+            welcome_url = '/welcome?u={u}'.format(u=username)
+            self.redirect(welcome_url)
+#            self.redirect("/welcome")
 
 class WelcomeHandler(webapp2.RequestHandler):
-    def post(self):
-        content = 'Welcome, ' + self.request.get("username") + '!'
+    def get(self):
+        content = 'Welcome, ' + self.request.get("u") + '!'
         self.response.write(content)
+
+        # self.response.headers['Content-Type'] = 'text/plain'
+        # self.response.out.write(self.request)
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
