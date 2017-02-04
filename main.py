@@ -98,19 +98,9 @@ def valid_email(email):
 def escape_html(input_string):
     return cgi.escape(input_string, quote=True)
 
-def format_content(input_username="", input_email="", username_error="", password_error="", email_error=""):
-    # HTML Escape Anything Input By The User Before Sending Back Out in HTML
-    if input_username:
-        username = escape_html(input_username)
-    else:
-        username = ""
+def format_content(username="", email="", username_error="", password_error="", email_error=""):
 
-    if input_email:
-        email = escape_html(input_email)
-    else:
-        email = ""
-
-    main = main_content.format(u=username, e=email, usererr=username_error, passworderr=password_error, emailerr=email_error)
+    main = main_content.format(u=escape_html(username), e=escape_html(email), usererr=username_error, passworderr=password_error, emailerr=email_error)
     return page_header + main + page_footer
 
 class MainHandler(webapp2.RequestHandler):
