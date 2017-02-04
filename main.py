@@ -1,21 +1,7 @@
 #!/usr/bin/env python
-#
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 import webapp2
 import re
+import cgi
 
 USER_REGEX = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 PASSWORD_REGEX = re.compile(r"^.{3,20}$")
@@ -94,19 +80,36 @@ def valid_username(username):
         if USER_REGEX.match(username):
             return username
 
-def valid_password(password, verify):
+def passwords_match(password, verify):
     if password and verify:
         if password == verify:
-            if PASSWORD_REGEX.match(password):
-                return password
+            return password
+
+def valid_password(password):
+    if password:
+        if PASSWORD_REGEX.match(password):
+            return password
 
 def valid_email(email):
     if email:
         if EMAIL_REGEX.match(email):
             return email
 
-def format_content(username="", email="", username_error="", password_error="", email_error=""):
-#    main = main_content.format(u=username, e=email; username-error=username_error; password-error=password_error; email-error=email_error)
+def escape_html(input_string):
+    return cgi.escape(input_string, quote=True)
+
+def format_content(input_username="", input_email="", username_error="", password_error="", email_error=""):
+    # HTML Escape Anything Input By The User Before Sending Back Out in HTML
+    if input_username:
+        username = escape_html(input_username)
+    else:
+        username = ""
+
+    if input_email:
+        email = escape_html(input_email)
+    else:
+        email = ""
+
     main = main_content.format(u=username, e=email, usererr=username_error, passworderr=password_error, emailerr=email_error)
     return page_header + main + page_footer
 
@@ -124,7 +127,7 @@ class MainHandler(webapp2.RequestHandler):
 
         # Validate Input
         username = valid_username(input_username)
-        password = valid_password(input_password, input_verify_password)
+        password = valid_password(input_password)
         email = valid_email(input_email)
 
         # Display Error Screen If There Are Errors
@@ -137,6 +140,10 @@ class MainHandler(webapp2.RequestHandler):
             input_errors = True
             username_error = 'Invalid Username'
 
+        if not passwords_match(input_password, input_verify_password):
+            input_errors = True
+            password_error = 'Passwords Do Not Match'
+
         if not password:
             input_errors = True
             password_error = 'Invalid Password'
@@ -147,14 +154,10 @@ class MainHandler(webapp2.RequestHandler):
                 email_error = 'Invalid Email'
 
         if input_errors:
-#            content = page_header + main_content + "Incorrect input" + page_footer
             content = format_content(input_username, input_email, username_error, password_error, email_error)
             self.response.write(content)
-            #self.write.form("Incorrect input")
         else:
-            welcome_url = '/welcome?u={u}'.format(u=username)
-            self.redirect(welcome_url)
-#            self.redirect("/welcome")
+            self.redirect("/welcome?u=" + username)
 
 class WelcomeHandler(webapp2.RequestHandler):
     def get(self):
